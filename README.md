@@ -1,62 +1,76 @@
 # IDA Vtable Recovery
 
-IDA Pro plugin for automated C++ vtable discovery, RTTI parsing, and class hierarchy reconstruction. Works on x86-64 PE binaries.
+IDA Vtable Recovery is an IDAPython research plugin for discovering C++ vtables,
+parsing MSVC RTTI metadata, and exporting reconstructed class information from
+x86-64 PE binaries.
 
-Scans `.rdata` sections for arrays of function pointers, parses MSVC RTTI structures when available, and falls back to heuristic analysis for stripped binaries.
+The project is designed for reverse engineering and defensive binary analysis.
+It helps analysts document class layouts in stripped binaries and reason about
+virtual dispatch, inheritance, and object-oriented control flow.
+
+## What is implemented
+
+- `.rdata` scanning for consecutive function-pointer arrays
+- vtable candidate filtering against executable `.text` pointers
+- MSVC x64 `CompleteObjectLocator` parsing
+- `TypeDescriptor`, `ClassHierarchyDescriptor`, and base-class descriptor parsing
+- class hierarchy reconstruction when RTTI is available
+- heuristic vtable scoring for stripped binaries without RTTI
+- constructor-store pattern checks for stronger vtable confidence
+- JSON export of recovered vtables and hierarchy data
+- C++ header export with reconstructed class skeletons
 
 ## Requirements
 
 - IDA Pro 7.x or later
-- Python 3 (IDAPython)
+- Python 3 through IDAPython
 - x86-64 PE binary loaded in IDA
 
 ## Installation
 
 Copy the plugin files to your IDA plugins directory:
 
-```
-cp ida_vtable_recovery.py   <IDA_DIR>/plugins/
-cp vtable_heuristics.py     <IDA_DIR>/plugins/
-cp export_results.py        <IDA_DIR>/plugins/
+```bash
+cp ida_vtable_recovery.py <IDA_DIR>/plugins/
+cp vtable_heuristics.py <IDA_DIR>/plugins/
+cp export_results.py <IDA_DIR>/plugins/
 ```
 
-Or add the repository directory to your `IDAUSR` path.
+Or add this repository directory to your `IDAUSR` path.
 
 ## Usage
 
-From IDA: `Edit > Plugins > Vtable Recovery`
+From IDA, open:
 
-The plugin will:
+```text
+Edit > Plugins > Vtable Recovery
+```
 
-1. Scan `.rdata` for vtable candidates (consecutive code pointers)
-2. Parse RTTI `CompleteObjectLocator` at `vtable[-1]` if present
-3. Create IDA struct types for each discovered vtable
-4. Rebuild class hierarchy from `ClassHierarchyDescriptor` data
-5. Annotate xrefs to vtable addresses with class/method comments
-
-### Scripting
+Programmatic usage:
 
 ```python
 from ida_vtable_recovery import VtableScanner
+from export_results import export_to_json, export_to_header
 
 scanner = VtableScanner()
 scanner.scan()
 
-# Export results
-from export_results import export_to_json, export_to_header
 export_to_json(scanner, "vtables.json")
 export_to_header(scanner, "classes.h")
 ```
 
-### Stripped binaries
+## Current status
 
-When RTTI is not available, the plugin uses heuristic analysis to score vtable candidates and infer inheritance relationships from shared vtable prefixes. See `vtable_heuristics.py`.
+The plugin is a practical research prototype. RTTI parsing assumes the MSVC x64
+ABI, and heuristic recovery is best treated as analyst assistance rather than
+ground truth. GCC/Clang RTTI, virtual inheritance edge cases, and split vtables
+need more work.
 
-## Limitations
+## Responsible use
 
-- RTTI parsing assumes MSVC ABI layout. GCC/Clang RTTI is not yet supported.
-- Virtual inheritance with diamond patterns may not reconstruct correctly.
-- Vtables split across multiple sections are not detected.
+This project is for reverse engineering, malware-analysis labs, and defensive
+binary analysis. It does not modify target binaries or provide exploitation
+functionality.
 
 ## License
 
